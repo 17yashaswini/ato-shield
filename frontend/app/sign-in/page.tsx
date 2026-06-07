@@ -74,7 +74,7 @@ export default function SignInPage() {
       }
 
       setRiskScore(riskData.risk_score)
-      setRiskLevel(riskData.risk_level)
+      setRiskLevel(riskData.risk_level as 'low' | 'medium' | 'high')
       setAnomalyFactors(riskData.anomaly_factors)
       setSessionId(riskData.session_id)
 
