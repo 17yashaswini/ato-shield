@@ -5,16 +5,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach Clerk token automatically
-api.interceptors.request.use(async (config) => {
-  if (typeof window !== 'undefined') {
-    try {
-      const { Clerk } = await import('@clerk/nextjs')
-      // Token attached by Clerk automatically via cookies in Next.js
-    } catch {}
-  }
-  return config
-})
 
 export interface BehavioralPayload {
   clerk_user_id: string
