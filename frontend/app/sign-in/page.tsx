@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSignIn } from '@clerk/nextjs'
+import { useState } from 'react'
+import { useSignIn, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Eye, EyeOff, AlertTriangle, Loader2, CheckCircle, Activity } from 'lucide-react'
@@ -10,9 +10,10 @@ import { useBehavioralTracker } from '@/hooks/useBehavioralTracker'
 import { behaviorAPI } from '@/lib/api'
 
 export default function SignInPage() {
-  const { signIn, setActive, isLoaded } = useSignIn()
+  const { signIn } = useSignIn()
+  const { setActive } = useClerk()
   const router = useRouter()
-  const { onKeyDown, onKeyUp, getProfile, reset } = useBehavioralTracker()
+  const { onKeyDown, onKeyUp, getProfile } = useBehavioralTracker()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,10 +24,8 @@ export default function SignInPage() {
   const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high' | null>(null)
   const [anomalyFactors, setAnomalyFactors] = useState<string[]>([])
   const [mfaCode, setMfaCode] = useState('')
-  const [sessionId, setSessionId] = useState('')
   const [typingActivity, setTypingActivity] = useState<number[]>([])
 
-  // Live typing activity visualizer
   const handlePasswordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     onKeyDown(e)
     setTypingActivity(prev => [...prev.slice(-19), Date.now()])
@@ -34,22 +33,20 @@ export default function SignInPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isLoaded || !email || !password) return
+    if (!signIn || !email || !password) return
     setError('')
 
     try {
       setStep('analyzing')
-      
-      // 1. First authenticate with Clerk
-      const result = await signIn.create({ identifier: email, password })
 
-      if (result.status !== 'complete') {
-        setError('Authentication failed. Please check your credentials.')
-        setStep('credentials')
-        return
-      }
+      const result = await signIn.create({ identifier: email, password }) as any
 
-      // 2. Send behavioral data to our ML backend
+if (!result || (result as any).status !== 'complete') {
+  setError('Authentication failed. Please check your credentials.')
+  setStep('credentials')
+  return
+}
+
       const profile = getProfile()
       const now = new Date()
 
@@ -69,22 +66,16 @@ export default function SignInPage() {
           login_day_of_week: now.getDay(),
         })
       } catch {
-        // If ML backend is down, allow login (fail open for demo)
         riskData = { risk_score: 10, risk_level: 'low', anomaly_factors: [], require_mfa: false, session_id: '' }
       }
 
       setRiskScore(riskData.risk_score)
       setRiskLevel(riskData.risk_level as 'low' | 'medium' | 'high')
       setAnomalyFactors(riskData.anomaly_factors)
-      setSessionId(riskData.session_id)
 
-      // 3. Decision based on risk
       if (riskData.risk_level === 'high' || riskData.require_mfa) {
         setStep('mfa')
-        // Trigger Clerk MFA
-        await signIn.prepareFirstFactor({ strategy: 'email_code', emailAddressId: email })
       } else {
-        // Safe — complete session
         await setActive({ session: result.createdSessionId })
         setStep('done')
         setTimeout(() => router.push('/dashboard'), 1200)
@@ -97,14 +88,14 @@ export default function SignInPage() {
 
   const handleMFASubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isLoaded || !mfaCode) return
+    if (!signIn || !mfaCode) return
     setError('')
-    
+
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: 'email_code',
-        code: mfaCode,
-      })
+      const result = await (signIn as any).attemptFirstFactor({
+  strategy: 'email_code',
+  code: mfaCode,
+}) as any
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
         setStep('done')
@@ -120,11 +111,9 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4 relative overflow-hidden">
-      {/* BG glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center">
             <Shield size={20} className="text-white" />
@@ -133,15 +122,8 @@ export default function SignInPage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* CREDENTIALS STEP */}
           {step === 'credentials' && (
-            <motion.div
-              key="credentials"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="card glow-border"
-            >
+            <motion.div key="credentials" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="card glow-border">
               <h1 className="text-2xl font-bold mb-1">Welcome back</h1>
               <p className="text-muted text-sm mb-6">Your behavioral signature is your second password</p>
 
@@ -177,17 +159,12 @@ export default function SignInPage() {
                       placeholder="••••••••"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(s => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
-                    >
+                    <button type="button" onClick={() => setShowPass(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white">
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
-                {/* Live typing activity */}
                 {typingActivity.length > 0 && (
                   <div className="bg-surface rounded-lg p-3 border border-border">
                     <div className="flex items-center gap-2 mb-2">
@@ -195,16 +172,9 @@ export default function SignInPage() {
                       <span className="text-xs text-muted">Behavioral tracking active</span>
                     </div>
                     <div className="flex items-end gap-0.5 h-8">
-                      {typingActivity.map((_, i) => {
-                        const height = Math.random() * 100
-                        return (
-                          <div
-                            key={i}
-                            className="flex-1 bg-accent/60 rounded-sm"
-                            style={{ height: `${20 + (i / typingActivity.length) * 80}%` }}
-                          />
-                        )
-                      })}
+                      {typingActivity.map((_, i) => (
+                        <div key={i} className="flex-1 bg-accent/60 rounded-sm" style={{ height: `${20 + (i / typingActivity.length) * 80}%` }} />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -221,15 +191,8 @@ export default function SignInPage() {
             </motion.div>
           )}
 
-          {/* ANALYZING STEP */}
           {step === 'analyzing' && (
-            <motion.div
-              key="analyzing"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="card glow-border text-center py-12"
-            >
+            <motion.div key="analyzing" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="card glow-border text-center py-12">
               <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="animate-spin text-accent" size={28} />
               </div>
@@ -238,24 +201,15 @@ export default function SignInPage() {
               <div className="mt-6 space-y-2 text-left max-w-xs mx-auto">
                 {['Checking keystroke dynamics...', 'Verifying device fingerprint...', 'Analyzing login context...'].map((item, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-muted">
-                    <Loader2 className="animate-spin" size={10} />
-                    {item}
+                    <Loader2 className="animate-spin" size={10} /> {item}
                   </div>
                 ))}
               </div>
             </motion.div>
           )}
 
-          {/* MFA STEP */}
           {step === 'mfa' && (
-            <motion.div
-              key="mfa"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="card glow-border"
-            >
-              {/* Risk indicator */}
+            <motion.div key="mfa" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="card glow-border">
               {riskScore !== null && (
                 <div className={`${riskBg} border rounded-lg p-4 mb-6`}>
                   <div className="flex items-center justify-between mb-2">
@@ -276,15 +230,9 @@ export default function SignInPage() {
               )}
 
               <h2 className="text-xl font-bold mb-1">Verify Your Identity</h2>
-              <p className="text-muted text-sm mb-6">
-                We've sent a verification code to <strong className="text-white">{email}</strong>
-              </p>
+              <p className="text-muted text-sm mb-6">We've sent a verification code to <strong className="text-white">{email}</strong></p>
 
-              {error && (
-                <div className="bg-red-900/30 border border-red-800 text-red-400 text-sm px-4 py-3 rounded-lg mb-4">
-                  {error}
-                </div>
-              )}
+              {error && <div className="bg-red-900/30 border border-red-800 text-red-400 text-sm px-4 py-3 rounded-lg mb-4">{error}</div>}
 
               <form onSubmit={handleMFASubmit} className="space-y-4">
                 <input
@@ -296,21 +244,13 @@ export default function SignInPage() {
                   maxLength={6}
                   required
                 />
-                <button type="submit" className="btn-primary w-full py-3">
-                  Verify & Continue
-                </button>
+                <button type="submit" className="btn-primary w-full py-3">Verify & Continue</button>
               </form>
             </motion.div>
           )}
 
-          {/* DONE STEP */}
           {step === 'done' && (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="card glow-border text-center py-12"
-            >
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="card glow-border text-center py-12">
               <div className="w-16 h-16 rounded-full bg-green-900/30 border border-green-700 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="text-green-400" size={32} />
               </div>

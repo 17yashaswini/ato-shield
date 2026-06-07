@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSignUp } from '@clerk/nextjs'
+import { useSignUp, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Eye, EyeOff, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
@@ -9,9 +9,10 @@ import Link from 'next/link'
 import { useBehavioralTracker } from '@/hooks/useBehavioralTracker'
 
 export default function SignUpPage() {
-  const { signUp, setActive, isLoaded } = useSignUp()
+  const { signUp } = useSignUp()
+  const { setActive } = useClerk()
   const router = useRouter()
-  const { onKeyDown, onKeyUp, getProfile } = useBehavioralTracker()
+  const { onKeyDown, onKeyUp } = useBehavioralTracker()
 
   const [step, setStep] = useState<'register' | 'verify' | 'done'>('register')
   const [email, setEmail] = useState('')
@@ -24,19 +25,18 @@ export default function SignUpPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isLoaded) return
+    if (!signUp) return
     setError('')
     setLoading(true)
 
     try {
-      await signUp.create({
+      await (signUp as any).create({
         emailAddress: email,
         password,
         firstName: name.split(' ')[0],
         lastName: name.split(' ').slice(1).join(' ') || '',
       })
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+      await (signUp as any).prepareEmailAddressVerification({ strategy: 'email_code' })
       setStep('verify')
     } catch (err: any) {
       setError(err.errors?.[0]?.longMessage || 'Registration failed.')
@@ -47,12 +47,12 @@ export default function SignUpPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isLoaded) return
+    if (!signUp) return
     setError('')
     setLoading(true)
 
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode })
+      const result = await (signUp as any).attemptEmailAddressVerification({ code: verifyCode }) as any
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
         setStep('done')
@@ -79,13 +79,7 @@ export default function SignUpPage() {
 
         <AnimatePresence mode="wait">
           {step === 'register' && (
-            <motion.div
-              key="register"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="card glow-border"
-            >
+            <motion.div key="register" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="card glow-border">
               <h1 className="text-2xl font-bold mb-1">Create Account</h1>
               <p className="text-muted text-sm mb-6">Your typing style becomes your unique identity</p>
 
@@ -144,11 +138,7 @@ export default function SignUpPage() {
                   🔐 As you type, ATO Shield begins learning your behavioral profile for future protection.
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full py-3 flex items-center justify-center gap-2 mt-2"
-                >
+                <button type="submit" disabled={loading} className="btn-primary w-full py-3 flex items-center justify-center gap-2 mt-2">
                   {loading ? <Loader2 className="animate-spin" size={16} /> : <Shield size={16} />}
                   Create Secure Account
                 </button>
@@ -162,13 +152,7 @@ export default function SignUpPage() {
           )}
 
           {step === 'verify' && (
-            <motion.div
-              key="verify"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="card glow-border"
-            >
+            <motion.div key="verify" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="card glow-border">
               <h2 className="text-xl font-bold mb-1">Verify your email</h2>
               <p className="text-muted text-sm mb-6">
                 Check <strong className="text-white">{email}</strong> for a 6-digit code
@@ -190,11 +174,7 @@ export default function SignUpPage() {
                   maxLength={6}
                   required
                 />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-                >
+                <button type="submit" disabled={loading} className="btn-primary w-full py-3 flex items-center justify-center gap-2">
                   {loading ? <Loader2 className="animate-spin" size={16} /> : null}
                   Verify Email
                 </button>
@@ -203,12 +183,7 @@ export default function SignUpPage() {
           )}
 
           {step === 'done' && (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="card glow-border text-center py-12"
-            >
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="card glow-border text-center py-12">
               <div className="w-16 h-16 rounded-full bg-green-900/30 border border-green-700 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="text-green-400" size={32} />
               </div>
