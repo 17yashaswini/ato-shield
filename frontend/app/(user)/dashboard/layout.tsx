@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* User card */}
         <div className="px-4 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <UserButton afterSignOutUrl="/" />
+            <UserButton fallbackRedirectUrl="/" />
             <div className="min-w-0">
               <div className="text-sm font-medium truncate">{user?.fullName || 'User'}</div>
               <div className="text-xs text-muted truncate">{user?.primaryEmailAddress?.emailAddress}</div>
