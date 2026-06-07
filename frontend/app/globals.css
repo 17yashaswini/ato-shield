@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #080C14;
+  color: #F9FAFB;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track { background: #080C14; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+
+.glass {
+  background: rgba(13, 19, 33, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.glow-border {
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+}
+
+.risk-low    { color: #10B981; }
+.risk-medium { color: #F59E0B; }
+.risk-high   { color: #EF4444; }
+
+.btn-primary {
+  background: #6366F1;
+  color: white;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { background: #818CF8; }
+
+.btn-ghost {
+  border: 1px solid #1F2937;
+  color: #6B7280;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: transparent;
+  cursor: pointer;
+}
+.btn-ghost:hover { border-color: #6366F1; color: white; }
+
+.card {
+  background: #111827;
+  border: 1px solid #1F2937;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.badge-low    { color: #34d399; border: 1px solid #065f46; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgba(20,83,45,0.3); display: inline-flex; align-items: center; gap: 3px; }
+.badge-medium { color: #fbbf24; border: 1px solid #78350f; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgba(113,63,18,0.3); display: inline-flex; align-items: center; gap: 3px; }
+.badge-high   { color: #f87171; border: 1px solid #7f1d1d; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgba(127,29,29,0.3); display: inline-flex; align-items: center; gap: 3px; }
+
+.glow-border {
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+}
