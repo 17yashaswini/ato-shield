@@ -5,7 +5,7 @@ const nextConfig = {
     return [
       {
         source: '/api/ml/:path*',
-        destination: 'http://localhost:8000/:path*',
+        destination: 'https://ato-shield-production.up.railway.app/:path*',
       },
     ]
   },
